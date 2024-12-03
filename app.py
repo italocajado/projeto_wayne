@@ -108,6 +108,10 @@ def adicionar_usuario():
     dados_usuario['SENHA'] = handler_password.gerar_hash(str(dados_usuario['SENHA']).encode('utf-8')).decode('utf-8')
 
     with db_connection_handler as db:
+        checar_duplicata = db.execute(repository_usuario.select_user(dados_usuario['NM_USUARIO'])).one_or_none()
+        if checar_duplicata:
+            if checar_duplicata[0] == dados_usuario['NM_USUARIO']:
+                return {'Error': 'Usuário já cadastrado.'}, 400
         try:
             db.begin() if not db.in_transaction() else None
             db.execute(repository_usuario.insert_user(dados_usuario))

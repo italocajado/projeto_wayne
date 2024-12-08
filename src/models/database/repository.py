@@ -13,7 +13,12 @@ class RepositoryUsuario:
         )
 
     def insert_user(dados:dict):
-        query = text("INSERT INTO tbl_usuario (NM_USUARIO, CPF, SENHA, ID_FUNCAO) VALUES ('%s', '%s', '%s', %s)" % tuple(x for x in dados.values()))
+        query = text("INSERT INTO tbl_usuario (NM_USUARIO, CPF, SENHA, ID_FUNCAO) VALUES ('{}', '{}', '{}', {})".format(
+            dados['NM_USUARIO'].upper(),
+            dados['CPF'],
+            dados['SENHA'],
+            dados['ID_FUNCAO']
+        ))
         return query
 
     def alter_user(dados:dict):
@@ -27,7 +32,7 @@ class RepositoryUsuario:
                     ALTERED_AT = '{ALTERED_AT}',
                     SENHA = '{SENHA}'
                 WHERE ID_USUARIO = {ID_USUARIO}""".format(
-                    NM_USUARIO = dados['NM_USUARIO'],
+                    NM_USUARIO = dados['NM_USUARIO'].upper(),
                     CPF = dados['CPF'],
                     ID_FUNCAO = dados['ID_FUNCAO'],
                     ALTERED_AT = dados['ALTERED_AT'],
@@ -44,7 +49,7 @@ class RepositoryUsuario:
                     ID_FUNCAO = {ID_FUNCAO},
                     ALTERED_AT = '{ALTERED_AT}'
                 WHERE ID_USUARIO = {ID_USUARIO}""".format(
-                    NM_USUARIO = dados['NM_USUARIO'],
+                    NM_USUARIO = dados['NM_USUARIO'].upper(),
                     CPF = dados['CPF'],
                     ID_FUNCAO = dados['ID_FUNCAO'],
                     ALTERED_AT = dados['ALTERED_AT'],
@@ -65,18 +70,30 @@ class RepositorySala:
     def select_all():
         return text('SELECT * FROM TBL_SALA')
     
+    def select_room(de_sala:str):
+        return text("""
+            SELECT ts.DE_SALA
+            FROM TBL_SALA ts 
+            WHERE ts.DE_SALA = '{}'""".format(de_sala.upper())
+        )
+    
     def insert_room(dados:dict):
-        query = text("INSERT INTO tbl_sala (DE_SALA, NVL_ACESSO) VALUES ('%s', %s)" % tuple(x for x in dados.values()))
+        query = text("INSERT INTO tbl_sala (DE_SALA, NVL_ACESSO) VALUES ('{}', {})".format(dados['DE_SALA'].upper(), dados['NVL_ACESSO']))
         return query
 
     def alter_room(dados:dict):
         query = text("""
             UPDATE TBL_SALA
             SET 
-                DE_SALA = '%s', 
-                ID_SALA = %s,
-                NVL_ACESSO = '%s'
-            WHERE ID_SALA = %s""" % tuple(x for x in dados.values()))
+                DE_SALA = '{}', 
+                NVL_ACESSO = '{}',
+                ALTERED_AT = '{}'
+            WHERE ID_SALA = {}""".format(
+                dados['DE_SALA'].upper(), 
+                dados['NVL_ACESSO'], 
+                dados['ALTERED_AT'], 
+                dados['ID'])
+            )
         return query
 
     def delete_room(id):
@@ -88,18 +105,28 @@ class RepositoryInventory:
         return text('SELECT * FROM TBL_INVENTARIO')
     
     def insert_item(dados:dict):
-        query = text("INSERT INTO tbl_inventario (DE_RECURSO, NR_SERIE, ID_SALA) VALUES ('%s', '%s', %s)" % tuple(x for x in dados.values()))
+        query = text("INSERT INTO tbl_inventario (DE_RECURSO, NR_SERIE, ID_SALA) VALUES ('{}', '{}', {})".format(
+            dados['DE_RECURSO'].upper(), 
+            dados['NR_SERIE'], 
+            dados['ID_SALA'])
+        )
         return query
     
     def alter_item(dados:dict):
         query = text("""
             UPDATE TBL_INVENTARIO
             SET 
-                DE_RECURSO = '%s', 
-                NR_SERIE = '%s',
-                ID_SALA = '%s',
-                ALTERED_AT = '%s'
-            WHERE ID_RECURSO = %s""" % tuple(x for x in dados.values()))
+                DE_RECURSO = '{}', 
+                NR_SERIE = '{}',
+                ID_SALA = '{}',
+                ALTERED_AT = '{}'
+            WHERE ID_RECURSO = {}""".format(
+                dados['DE_RECURSO'],
+                dados['NR_SERIE'],
+                dados['ID_SALA'],
+                dados['ALTERED_AT'],
+                dados['ID']
+            ))
         return query
     
     def delete_item(id):

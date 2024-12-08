@@ -1,16 +1,18 @@
 import os
 import sys
-from datetime import datetime
-from flask import Flask, jsonify, request
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, request, url_for, render_template, redirect, session
 from flask_cors import CORS
 from sqlalchemy.sql import text
-from sqlite3 import IntegrityError
 from src.models.database.connection import db_connection_handler
 from src.models.database.repository import RepositoryUsuario, RepositoryFuncao,RepositorySala,RepositoryInventory
 from src.models.password_hash import HandlerPasswordHash
 
 app = Flask(__name__)
 CORS(app)
+secret_key =  'b29e22ac-e40e-4ecd-8f2b-e8cc8b5eb139'
+app.secret_key = secret_key
+app.permanent_session_lifetime = timedelta(minutes=5)
 
 db_connection_handler.connect_to_db()
 repository_usuario = RepositoryUsuario
@@ -41,10 +43,6 @@ with db_connection_handler as db:
 
 ####################   ROTAS  ####################  
 
-@app.route('/', methods=['GET'])
-def main():
-    return "Hello World"
-
 ###### LOGIN ######
 @app.route('/login', methods=['POST'])
 def login():
@@ -63,17 +61,20 @@ def login():
 
     with db_connection_handler as db:
         dados_usuario_base = db.execute(repository_usuario.select_user(dados_usuario['NM_USUARIO'])).fetchall()
-    
+
     if len(dados_usuario_base) == 0:
-        return {'Error': 'Usuário ou senha inválido.'}, 404
+        # return {'Error': 'Usuário ou senha inválido.'}, 404
+        return {"success": False, "error": "Login ou senha inválido!"}, 401
     elif not handler_password.verificar_senha(str(dados_usuario['SENHA']).encode('utf-8'),dados_usuario_base[0][1].encode('utf-8')):
-        return {'Error': 'Usuário ou senha inválido.'}, 404
+        return {"success": False, "error": "Login ou senha inválido!"}, 401
     elif handler_password.verificar_senha(str(dados_usuario['SENHA']).encode('utf-8'),dados_usuario_base[0][1].encode('utf-8')):
-        return jsonify({
-            'status':'Usuário logado com sucesso!', 
-            'usuario': dados_usuario_base[0][0], 
-            'NVL_ACESSO': dados_usuario_base[0][2]
-        }), 200 
+        session['user'] = dados_usuario['NM_USUARIO']
+        return {"success": True, "redirect_url": url_for('inicio')}
+        # return jsonify({
+        #     'status':'Usuário logado com sucesso!', 
+        #     'usuario': dados_usuario_base[0][0], 
+        #     'NVL_ACESSO': dados_usuario_base[0][2]
+        # }), 200 
 
 ###### USUÁRIOS ######
 @app.route('/usuarios', methods=['GET'])
@@ -96,7 +97,7 @@ def adicionar_usuario():
         return jsonify({"error": "Formato inválido. Necessário o parâmetro Header = Content-Type: application/json."}), 400
     
     dados_usuario = request.json
-
+    
     if len(dados_usuario) != 4:
         return jsonify({"error": "Formato de payload inválido. Necessário 4 campos no payload (NM_USUARIO, CPF, SENHA, ID_FUNCAO)."}), 400
     
@@ -110,8 +111,8 @@ def adicionar_usuario():
     with db_connection_handler as db:
         checar_duplicata = db.execute(repository_usuario.select_user(dados_usuario['NM_USUARIO'])).one_or_none()
         if checar_duplicata:
-            if checar_duplicata[0] == dados_usuario['NM_USUARIO']:
-                return {'Error': 'Usuário já cadastrado.'}, 400
+            if checar_duplicata[0].upper() == dados_usuario['NM_USUARIO'].upper():
+                return {'error': 'Usuário já cadastrado.'}, 400
         try:
             db.begin() if not db.in_transaction() else None
             db.execute(repository_usuario.insert_user(dados_usuario))
@@ -119,16 +120,17 @@ def adicionar_usuario():
         except Exception as e:
             print(e)
             db.rollback()
-            return {'Error': 'Houve um erro no banco de dados.'}, 400
+            return {'error': 'Houve um erro no banco de dados.'}, 400
         
-    return jsonify({
-        'message': 'Usuário cadastrado com sucesso!',
-        'dados': {
-            'CPF':dados_usuario['CPF'], 
-            'NOME':dados_usuario['NM_USUARIO'],
-            'ID_FUNCAO':dados_usuario['ID_FUNCAO']
-        }
-    }), 200
+    return {"success": True, "message": 'Usuário cadastrado com sucesso!'}, 201
+    # return jsonify({
+    #     'message': 'Usuário cadastrado com sucesso!',
+    #     'dados': {
+    #         'CPF':dados_usuario['CPF'], 
+    #         'NOME':dados_usuario['NM_USUARIO'].upper(),
+    #         'ID_FUNCAO':dados_usuario['ID_FUNCAO']
+    #     }
+    # }), 200
 
 @app.route('/usuarios/alter/<id>', methods=['POST'])
 def alterar_usuario(id):
@@ -220,6 +222,10 @@ def adicionar_sala():
         return jsonify({"error": "Formato de payload inválido. Campos faltantes: {}".format(list)}), 400
         
     with db_connection_handler as db:
+        checar_duplicata = db.execute(repository_sala.select_room(dados_sala['DE_SALA'])).one_or_none()
+        if checar_duplicata:
+            if checar_duplicata[0].upper() == dados_sala['DE_SALA'].upper():
+                return {'error': 'Sala já cadastrada.'}, 400
         try:
             db.begin() if not db.in_transaction() else None
             db.execute(repository_sala.insert_room(dados_sala))
@@ -227,10 +233,10 @@ def adicionar_sala():
         except Exception as e:
             print(e)
             db.rollback()
-            return {'Error': 'Houve um erro no banco de dados.'}, 400
+            return {'error': 'Houve um erro no banco de dados.'}, 400
         
         
-    return jsonify({'message': 'Sala cadastrada com sucesso!', 'dados': dados_sala}), 200
+    return jsonify({'message': 'Sala cadastrada com sucesso!', 'dados': dados_sala}), 201
 
 @app.route('/salas/alter/<id>', methods=['POST'])
 def alterar_sala(id):
@@ -368,6 +374,54 @@ def deletar_item(id):
     else:
         return jsonify({'message': 'Recurso deletado com sucesso!'}), 200
 
+########## ROTAS FRONT ##############
+
+@app.route('/', methods=['GET'])
+def index():
+    if 'user' in session:
+        return redirect(url_for('inicio'))
+    else:
+        try:
+            error = request.args.get('error')  # Obtém a mensagem de erro passada como query string
+            return render_template('login.html', error = error)
+        except:
+            return render_template('login.html')
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    if 'user' in session:
+        session.clear()
+        return redirect(url_for('index'))
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/inicio', methods=['GET'])
+def inicio():
+    if 'user' in session:
+        return render_template('inicio.html')
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/cadastro', methods=['GET'])
+def cadastro():
+    if 'user' in session:
+        return render_template('cadastro.html')
+    else:
+        return redirect(url_for('index'))
+
+@app.route('/editar', methods=['GET'])
+def editar():
+    if 'user' in session:
+        return render_template('editar.html')
+    else:
+        return redirect(url_for('index'))
+    
+@app.route('/gerenciamento', methods=['GET'])
+def gerenciamento():
+    if 'user' in session:
+        return render_template('gerenciamento.html')
+    else:
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)

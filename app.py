@@ -209,17 +209,6 @@ def salas():
             'ALTERED_AT': e[4]
         } for e in response]
     return jsonify(response_dict), 200
-@app.route('/salas/itens', methods=['GET'])
-def salas_itens():
-    with db_connection_handler as db:
-        response = db.execute(repository_sala.select_all_itens()).fetchall()
-        response_dict = [{
-            'ID_ITEM': i[0],
-            'DE_RECURSO': i[1],
-            'NR_SERIE': i[2],
-            'ID_SALA': i[3]
-        }for i in response]
-    return jsonify(response_dict), 200
 
 @app.route('/salas/add', methods=['POST'])
 def adicionar_sala():
@@ -314,9 +303,7 @@ def inventario():
             'NR_SERIE': e[2],
             'ID_SALA': e[3],
             'CREATED_AT': e[4],
-            'ALTERED_AT': e[5],
-            'DE_SALA': e[7],
-            'NVL_ACESSO': e[8]
+            'ALTERED_AT': e[5]
         } for e in response]
     return jsonify(response_dict), 200
 
@@ -435,11 +422,10 @@ def editar():
     
 @app.route('/gerenciamento', methods=['GET'])
 def gerenciamento():
-    if 'user' not in session:
+    if 'user' in session:
+        return render_template('gerenciamento.html')
+    else:
         return redirect(url_for('index'))
-    if session.get('role') != 'ADMIN':
-        return 'Acesso negado', 403
-    return render_template('gerenciamento.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)

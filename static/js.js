@@ -262,9 +262,9 @@ document.getElementById('item-btn')?.addEventListener('click', () => {
 
 // gerenciamento
 async function carregarGerenciamento() {
-  try{
+  try {
     const salasResponse = await fetch(`${baseURL}/salas`);
-    const itensResponse = await fetch(`${baseURL}/salas/itens`);
+    const itensResponse = await fetch(`${baseURL}/inventario`);
     const salas = await salasResponse.json();
     const itens = await itensResponse.json();
 
@@ -274,23 +274,26 @@ async function carregarGerenciamento() {
     salas.forEach(sala => {
       const salaDiv = document.createElement('div');
       salaDiv.className = 'sala';
-      salaDiv.innerHTML =`
-        <h3>sala: ${sala.DE_SALA}</h3>
+      salaDiv.innerHTML = `
+        <h3>Sala: ${sala.DE_SALA}</h3>
         <p>Nível de acesso: ${sala.NVL_ACESSO}</p>
-        <ul id="itens-#{sala.ID_SALA}"></ul>
+        <ul id="itens-${sala.ID_SALA}"></ul>
       `;
+
       const salaItens = itens.filter(item => item.ID_SALA === sala.ID_SALA);
       const itensList = salaDiv.querySelector(`#itens-${sala.ID_SALA}`);
+      
       salaItens.forEach(item => {
-        const itemli = document.createElement('li');
-        itemli.textContent = `${item.DE_RECURSO} (Nº Série: ${item.NR_SERIE})`;
-        itensList.appendChild(itemli);
+        const itemLi = document.createElement('li');
+        itemLi.textContent = `${item.DE_RECURSO} (Nº Série: ${item.NR_SERIE})`;
+        itensList.appendChild(itemLi);
       });
 
-      managementSection.appendChild(salaDiv);
+      gerenciamento.appendChild(salaDiv);
     });
-  } catch(error){
-    console.error('Erro ao carregar dados: ',error);
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
   }
 }
-document.addEventListener('DOMContentLoaded', carregarGerenciamento)
+
+document.addEventListener('DOMContentLoaded', carregarGerenciamento);

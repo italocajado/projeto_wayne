@@ -102,7 +102,7 @@ class RepositorySala:
 
 class RepositoryInventory:
     def select_all():
-        return text('SELECT * FROM TBL_INVENTARIO')
+        return text('SELECT * FROM TBL_INVENTARIO a INNER JOIN TBL_SALA b ON a.ID_SALA = b.ID_SALA')
     
     def insert_item(dados:dict):
         query = text("INSERT INTO tbl_inventario (DE_RECURSO, NR_SERIE, ID_SALA) VALUES ('{}', '{}', {})".format(

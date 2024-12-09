@@ -40,6 +40,8 @@ with db_connection_handler as db:
                 db.execute(text(e))
                 db.commit()
             print('Dados iniciais inseridos')
+      
+        
 
 ####################   ROTAS  ####################  
 
@@ -61,9 +63,11 @@ def login():
 
     with db_connection_handler as db:
         dados_usuario_base = db.execute(repository_usuario.select_user(dados_usuario['NM_USUARIO'])).fetchall()
-
+    print(dados_usuario_base)
     if len(dados_usuario_base) == 0:
         # return {'Error': 'Usuário ou senha inválido.'}, 404
+        # print(str(dados_usuario['SENHA']).encode('utf-8'))
+        # print(dados_usuario_base[0][1].encode('utf-8'))
         return {"success": False, "error": "Login ou senha inválido!"}, 401
     elif not handler_password.verificar_senha(str(dados_usuario['SENHA']).encode('utf-8'),dados_usuario_base[0][1].encode('utf-8')):
         return {"success": False, "error": "Login ou senha inválido!"}, 401

@@ -314,7 +314,9 @@ def inventario():
             'NR_SERIE': e[2],
             'ID_SALA': e[3],
             'CREATED_AT': e[4],
-            'ALTERED_AT': e[5]
+            'ALTERED_AT': e[5],
+            'DE_SALA': e[7],
+            'NVL_ACESSO': e[8]
         } for e in response]
     return jsonify(response_dict), 200
 
